@@ -2,30 +2,41 @@
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>محاسبه‌گر نهایی تتر (بدون خطا)</title>
+    <title>محاسبه‌گر تتر لحظه‌ای</title>
     <style>
-        body { font-family: Tahoma, sans-serif; background-color: #f0f2f5; padding: 20px; direction: rtl; }
-        .card { max-width: 600px; margin: auto; background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .price-tag { font-size: 24px; color: #2e7d32; font-weight: bold; text-align: center; margin: 20px 0; padding: 10px; background: #e8f5e9; border-radius: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background: #1565c0; color: white; padding: 12px; font-size: 14px; }
-        td { padding: 12px; text-align: center; border-bottom: 1px solid #ddd; font-weight: bold; }
-        .error { color: #c62828; text-align: center; font-weight: bold; }
-        .loading { text-align: center; color: #666; animation: blink 1s infinite; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        :root { --primary: #1a73e8; --success: #2e7d32; --danger: #d32f2f; }
+        body { font-family: Tahoma, sans-serif; background-color: #f8f9fa; padding: 20px; direction: rtl; color: #333; }
+        .card { max-width: 650px; margin: auto; background: white; border-radius: 20px; padding: 30px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); border: 1px solid #eee; }
+        h2 { text-align: center; color: #1565c0; margin-bottom: 5px; }
+        .price-tag { font-size: 26px; color: var(--success); font-weight: bold; text-align: center; margin: 15px 0; padding: 15px; background: #f1f8e9; border-radius: 12px; border: 1px dashed var(--success); }
+        .controls { text-align: center; margin-bottom: 20px; }
+        button { background: var(--primary); color: white; border: none; padding: 10px 25px; border-radius: 8px; cursor: pointer; font-family: Tahoma; font-size: 14px; transition: 0.3s; }
+        button:hover { background: #1557b0; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #f4f6f8; color: #5f6368; padding: 15px; font-size: 13px; border-bottom: 2px solid #eee; }
+        td { padding: 15px; text-align: center; border-bottom: 1px solid #f1f1f1; font-weight: bold; font-size: 15px; }
+        .usd-fee { color: var(--primary); }
+        .toman-final { color: var(--danger); font-size: 17px; }
+        .update-text { text-align: center; font-size: 11px; color: #888; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2 style="text-align:center;">تبدیل دلار به تومان (+۱۵٪)</h2>
-    <div id="status" class="loading">در حال برقراری ارتباط با بازار...</div>
-    <div id="price-box" class="price-tag" style="display:none;"></div>
+    <h2>تبدیل دلار به تومان (+۱۵٪ سود)</h2>
+    <p class="update-text" id="time-label">در حال دریافت اطلاعات...</p>
+    
+    <div id="price-box" class="price-tag">---</div>
 
-    <table id="main-table" style="display:none;">
+    <div class="controls">
+        <button id="update-btn" onclick="getPrice()">بروزرسانی قیمت لحظه‌ای</button>
+    </div>
+
+    <table id="main-table">
         <thead>
             <tr>
-                <th>دلار اصلی</th>
+                <th>مبلغ اصلی</th>
                 <th>با ۱۵٪ سود</th>
                 <th>تومان نهایی</th>
             </tr>
@@ -38,66 +49,54 @@
     const amounts = [100, 300, 500, 700, 800, 900, 1000, 1500, 2000, 2500, 3000];
     
     async function getPrice() {
-        const statusDiv = document.getElementById('status');
+        const btn = document.getElementById('update-btn');
         const priceBox = document.getElementById('price-box');
-        const table = document.getElementById('main-table');
+        const timeLabel = document.getElementById('time-label');
+        
+        // غیرفعال کردن دکمه هنگام لود
+        btn.disabled = true;
+        btn.innerText = "در حال دریافت...";
 
-        // لیست منابع قیمت (اگر اولی کار نکرد، دومی را چک می‌کند)
-        const sources = [
-            'https://api.tetherland.com/currencies',
-            'https://api.nobitex.ir/v2/orderbook/USDTIRT'
-        ];
+        // استفاده از Timestamp برای دور زدن حافظه پنهان مرورگر (Anti-Cache)
+        const cacheBuster = new Date().getTime();
+        const url = `https://api.tetherland.com/currencies?t=${cacheBuster}`;
 
-        for (let url of sources) {
-            try {
-                // استفاده از یک متد ساده‌تر برای دور زدن محدودیت‌ها
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                let price;
-                if (url.includes('tetherland')) {
-                    price = parseInt(data.data.currencies.USDT.price);
-                } else {
-                    price = parseInt(data.lastTradePrice) / 10;
-                }
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            const price = parseInt(data.data.currencies.USDT.price);
 
-                if (price > 1000) {
-                    showData(price);
-                    return; // اگر قیمت را گرفت، از حلقه خارج شو
-                }
-            } catch (e) {
-                console.log("تلاش با منبع بعدی...");
+            if (price > 1000) {
+                priceBox.innerText = `${price.toLocaleString()} تومان`;
+                timeLabel.innerText = `آخرین بروزرسانی: ${new Date().toLocaleTimeString('fa-IR')}`;
+                renderTable(price);
             }
+        } catch (e) {
+            console.error("خطا در دریافت:", e);
+            alert("خطا در دریافت قیمت. احتمالاً به دلیل محدودیت مرورگر یا فیلترشکن است.");
+        } finally {
+            // فعال کردن مجدد دکمه
+            btn.disabled = false;
+            btn.innerText = "بروزرسانی قیمت لحظه‌ای";
         }
-
-        // اگر هیچ‌کدام کار نکرد (به دلیل محدودیت مرورگر محلی)
-        statusDiv.innerHTML = `<div class="error">خطای امنیتی مرورگر! <br> برای لود شدن قیمت، لطفا روی دکمه زیر کلیک کنید:</div>
-        <button onclick="window.location.reload()" style="margin-top:10px; padding:10px; cursor:pointer;">تلاش مجدد</button>
-        <p style="font-size:12px; color:gray;">نکته: اگر فایل را مستقیم از کامپیوتر باز می‌کنید، مرورگر اجازه دریافت قیمت را نمی‌دهد. راه حل: فیلترشکن را خاموش یا روشن کنید.</p>`;
     }
 
-    function showData(price) {
-        document.getElementById('status').style.display = 'none';
-        const priceBox = document.getElementById('price-box');
-        const table = document.getElementById('main-table');
+    function renderTable(price) {
         const rows = document.getElementById('rows');
-
-        priceBox.innerText = `قیمت تتر: ${price.toLocaleString()} تومان`;
-        priceBox.style.display = 'block';
-        table.style.display = 'table';
-
         rows.innerHTML = '';
         amounts.forEach(amt => {
             const withFee = amt * 1.15;
             const toman = Math.round(withFee * price);
-            rows.innerHTML += `<tr>
-                <td>$${amt.toLocaleString()}</td>
-                <td style="color:#1565c0">$${withFee.toLocaleString()}</td>
-                <td style="color:#c62828">${toman.toLocaleString()} تومان</td>
-            </tr>`;
+            rows.innerHTML += `
+                <tr>
+                    <td>$${amt.toLocaleString()}</td>
+                    <td class="usd-fee">$${withFee.toLocaleString()}</td>
+                    <td class="toman-final">${toman.toLocaleString()} تومان</td>
+                </tr>`;
         });
     }
 
+    // لود اولیه
     getPrice();
 </script>
 
