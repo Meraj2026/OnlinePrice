@@ -2,37 +2,40 @@
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>محاسبه‌گر هوشمند قیمت تتر</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>قیمت لحظه‌ای تتر + ۱۵٪ سود</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eceff1; padding: 30px; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        h2 { color: #2c3e50; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; }
-        .status-box { background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background: #4CAF50; color: white; padding: 15px; }
-        td { padding: 12px; border-bottom: 1px solid #ddd; text-align: center; }
-        tr:hover { background-color: #f1f1f1; }
-        .btn-refresh { background: #2196F3; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
-        .btn-refresh:hover { background: #1976D2; }
+        :root { --primary: #2563eb; --secondary: #10b981; --bg: #f8fafc; }
+        body { font-family: Tahoma, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; color: #1e293b; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h2 { text-align: center; color: var(--primary); margin-bottom: 30px; }
+        .price-card { background: linear-gradient(135deg, #2563eb, #1e40af); color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 25px; font-size: 1.2rem; }
+        table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 12px; }
+        th { background-color: #f1f5f9; color: #475569; padding: 15px; font-weight: bold; }
+        td { padding: 15px; text-align: center; border-bottom: 1px solid #f1f5f9; font-size: 1.05rem; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #f8fafc; }
+        .usd-val { font-weight: bold; color: #64748b; }
+        .profit-val { font-weight: bold; color: var(--secondary); }
+        .toman-val { font-weight: bold; color: #e11d48; }
+        #loading { font-size: 0.9rem; opacity: 0.8; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>لیست قیمت‌ها (تتر + ۱۵٪ کارمزد)</h2>
+    <h2>لیست قیمت‌های به‌روز (تتر + ۱۵٪)</h2>
     
-    <div class="status-box" id="status-area">
-        در حال هماهنگ‌سازی با بازار جهانی...
+    <div id="price-display" class="price-card">
+        <span id="loading">در حال فراخوانی قیمت از شبکه...</span>
     </div>
-
-    <button class="btn-refresh" onclick="location.reload()">به‌روزرسانی دستی صفحه</button>
 
     <table>
         <thead>
             <tr>
-                <th>مبلغ (دلار)</th>
-                <th>با ۱۵٪ سود ($)</th>
-                <th>معادل ریالی (تومان)</th>
+                <th>مبلغ ($)</th>
+                <th>با سود ۱۵٪ ($)</th>
+                <th>قیمت نهایی (تومان)</th>
             </tr>
         </thead>
         <tbody id="table-body">
@@ -42,53 +45,57 @@
 
 <script>
     const amounts = [100, 300, 500, 700, 800, 900, 1000, 1500, 2000, 2500, 3000];
-    const fee = 1.15;
+    const profitRate = 1.15;
 
-    async function getPrice() {
-        const statusArea = document.getElementById('status-area');
-        
+    async function getTetherPrice() {
         try {
-            // استفاده از API بایننس برای تست اتصال (یا یک سرویس عمومی نرخ ارز)
-            const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDTTRY'); 
-            // نکته: چون قیمت تتر به تومان در صرافی‌های خارجی نیست، معمولا باید از صرافی داخلی گرفت.
-            // اگر نوبیتکس خطا می‌دهد، احتمالاً به خاطر فیلترشک یا محدودیت مرورگر است.
+            // استفاده از یک پروکسی رایگان برای دور زدن محدودیت CORS
+            const proxyUrl = 'https://api.allorigins.win/get?url=';
+            const targetUrl = encodeURIComponent('https://api.nobitex.ir/v2/orderbook/USDTIRT');
             
-            // راه حل جایگزین: دریافت دستی قیمت اگر API مسدود بود
-            let manualPrice = prompt("به دلیل محدودیت مرورگر در دریافت خودکار، لطفا قیمت لحظه‌ای تتر را وارد کنید (به تومان):", "70000");
+            const response = await fetch(proxyUrl + targetUrl);
+            const data = await response.json();
+            const parsedData = JSON.parse(data.contents);
             
-            if (manualPrice == null || manualPrice == "") {
-                manualPrice = 70000; // مقدار پیش‌فرض
-            }
-
-            statusArea.innerText = `قیمت مبنای محاسبه: ${parseInt(manualPrice).toLocaleString()} تومان`;
-            renderData(parseInt(manualPrice));
-
+            // دریافت آخرین قیمت و تبدیل ریال به تومان
+            const priceInToman = parseInt(parsedData.lastTradePrice) / 10;
+            
+            document.getElementById('price-display').innerHTML = `
+                قیمت لحظه‌ای تتر در بازار: 
+                <strong>${priceInToman.toLocaleString()} تومان</strong>
+            `;
+            
+            updateTable(priceInToman);
         } catch (error) {
-            statusArea.style.background = "#ffebee";
-            statusArea.innerText = "خطا در اتصال. لطفاً قیمت را دستی وارد کنید.";
-            let price = prompt("خطا در دریافت خودکار. قیمت تتر را وارد کنید:", "70000");
-            renderData(price);
+            console.error('Error:', error);
+            document.getElementById('price-display').innerHTML = "خطا در برقراری ارتباط با صرافی. دوباره تلاش کنید.";
         }
     }
 
-    function renderData(tetherPrice) {
+    function updateTable(tetherPrice) {
         const tbody = document.getElementById('table-body');
         tbody.innerHTML = '';
 
-        amounts.forEach(amt => {
-            const finalUsd = amt * fee;
-            const finalToman = finalUsd * tetherPrice;
+        amounts.forEach(usd => {
+            const usdWithProfit = usd * profitRate;
+            const finalToman = usdWithProfit * tetherPrice;
 
-            const row = `<tr>
-                <td>${amt.toLocaleString()} $</td>
-                <td style="color: #2e7d32; font-weight:bold;">${finalUsd.toLocaleString()} $</td>
-                <td style="color: #c62828; font-weight:bold;">${Math.round(finalToman).toLocaleString()} تومان</td>
-            </tr>`;
+            const row = `
+                <tr>
+                    <td class="usd-val">${usd.toLocaleString()} $</td>
+                    <td class="profit-val">${usdWithProfit.toLocaleString()} $</td>
+                    <td class="toman-val">${Math.round(finalToman).toLocaleString()} تومان</td>
+                </tr>
+            `;
             tbody.innerHTML += row;
         });
     }
 
-    window.onload = getPrice;
+    // اجرا به محض لود شدن صفحه
+    getTetherPrice();
+    
+    // آپدیت خودکار هر 60 ثانیه
+    setInterval(getTetherPrice, 60000);
 </script>
 
 </body>
