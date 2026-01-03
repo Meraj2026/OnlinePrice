@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>طراح ساختار سازمانی</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+        }
+
+        .node {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .node:hover {
+            filter: brightness(1.05);
+        }
+
+        .line {
+            stroke: #94a3b8;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .node-text {
+            font-size: 14px;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+        }
+
+        .delete-btn, .add-btn, .edit-btn {
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .node:hover .delete-btn,
+        .node:hover .add-btn,
+        .node:hover .edit-btn {
+            opacity: 1;
+        }
+
+        .modal-backdrop {
+            background: rgba(15, 23, 42, 0.55);
+        }
+
+        #chartContainer {
+            width: 1200px;
+            height: 850px;
+            max-width: 100%;
+            position: relative;
+        }
+
+        .chart-controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .chart-control-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: white;
+            border: 2px solid #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 18px;
+        }
+
+        .chart-control-btn:hover {
+            background: #f1f5f9;
+            border-color: #94a3b8;
+        }
+
+        .chart-control-btn:active {
+            transform: scale(0.95);
+        }
+
+        .fullscreen-mode {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: 100vw !important;
+            z-index: 9999 !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- صفحه شروع -->
+    <div id="startupOverlay" class="fixed inset-0 z-40 flex items-center justify-center modal-backdrop">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full mx-4 p-8 space-y-6">
+            <h1 class="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-2">شروع طراحی ساختار سازمانی</h1>
+            <p class="text-center text-gray-600 text-sm md:text-base mb-4">
+                لطفاً یکی از گزینه‌های زیر را انتخاب کنید:
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button id="newChartBtn" class="flex flex-col items-center justify-center border-2 border-blue-500 text-blue-600 rounded-xl py-6 px-4 hover:bg-blue-50 transition">
+                    <span class="text-4xl mb-2">＋</span>
+                    <span class="font-semibold text-lg">شروع نمودار جدید</span>
+                    <span class="text-xs text-gray-500 mt-1">تعریف ریشه جدید برای سازمان</span>
+                </button>
+                <button id="loadFromStartupBtn" class="flex flex-col items-center justify-center border-2 border-emerald-500 text-emerald-600 rounded-xl py-6 px-4 hover:bg-emerald-50 transition">
+                    <span class="text-4xl mb-2">📂</span>
+                    <span class="font-semibold text-lg">بارگذاری فایل پشتیبان</span>
+                    <span class="text-xs text-gray-500 mt-1">ادامه ویرایش ساختار قبلی</span>
+                </button>
+            </div>
+            <p class="text-xs text-gray-500 text-center mt-2">
+                بعداً هم می‌توانید از داخل برنامه فایل پشتیبان جدید دانلود یا فایل قبلی را بارگذاری کنید.
+            </p>
+        </div>
+        <input type="file" id="startupBackupInput" accept="application/json" class="hidden">
+    </div>
+
+    <!-- مودال افزودن/ویرایش فرد -->
+    <div id="addPersonModal" class="fixed inset-0 z-30 hidden items-center justify-center modal-backdrop">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">
+            <h2 id="addModalTitle" class="text-xl font-semibold text-gray-800 mb-4">افزودن فرد جدید</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">نام</label>
+                    <input type="text" id="personNameInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="نام فرد را وارد کنید">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">شکل</label>
+                    <select id="shapeTypeSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="rect">مستطیل</option>
+                        <option value="ellipse">بیضی</option>
+                        <option value="circle">دایره</option>
+                        <option value="diamond">لوزی</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">رنگ شکل</label>
+                    <select id="shapeColorSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="#ffffff">سفید</option>
+                        <option value="#fbbf24">زرد</option>
+                        <option value="#10b981">سبز</option>
+                        <option value="#3b82f6">آبی</option>
+                        <option value="#8b5cf6">بنفش</option>
+                        <option value="#ef4444">قرمز</option>
+                        <option value="#f97316">نارنجی</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-between mt-6 gap-3">
+                <button id="cancelAddBtn" class="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">انصراف</button>
+                <button id="savePersonBtn" class="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">ثبت</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-6">
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-6">طراح ساختار سازمانی</h1>
+
+        <!-- پنل کنترل بالا -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">مدیریت نمودار</h2>
+
+            <div class="flex flex-wrap gap-3 mb-4">
+                <button id="exportBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm md:text-base">
+                    دانلود تصویر نمودار (PNG)
+                </button>
+                <button id="backupBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm md:text-base">
+                    دانلود فایل پشتیبان (JSON)
+                </button>
+                <button id="loadBackupBtn" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm md:text-base">
+                    بارگذاری فایل پشتیبان
+                </button>
+                <button id="clearAllBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm md:text-base ml-auto">
+                    پاک کردن همه
+                </button>
+            </div>
+
+            <input type="file" id="backupFileInput" accept="application/json" class="hidden">
+
+            <div id="infoBox" class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs md:text-sm text-gray-700 leading-relaxed">
+                <p><strong>راهنما:</strong></p>
+                <ul class="list-disc pr-5 mt-1 space-y-1">
+                    <li>برای <strong>افزودن نفر جدید</strong> روی علامت <span class="text-green-500 font-bold">＋</span> سبز روی هر فرد کلیک کنید.</li>
+                    <li>برای <strong>ویرایش</strong> هر فرد روی علامت <span class="font-bold">✏️</span> مداد کلیک کنید.</li>
+                    <li>برای <strong>حذف</strong> هر فرد به همراه تمام زیرمجموعه‌اش، روی علامت <span class="text-red-500 font-bold">×</span> قرمز کلیک کنید.</li>
+                    <li>از دکمه‌های <strong>زوم (🔍)</strong> در کنار کادر برای بزرگنمایی و دکمه <strong>تمام‌صفحه (⛶)</strong> استفاده کنید.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- نمودار -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div id="chartContainer" class="overflow-auto border border-gray-300 rounded-lg bg-gray-50 mx-auto">
+                <!-- دکمه‌های کنترل داخل کادر -->
+                <div class="chart-controls">
+                    <button id="zoomInBtn" class="chart-control-btn" title="بزرگنمایی">🔍+</button>
+                    <button id="zoomOutBtn" class="chart-control-btn" title="کوچک‌نمایی">🔍-</button>
+                    <button id="zoomResetBtn" class="chart-control-btn" title="بازنشانی">⟲</button>
+                    <button id="fullscreenBtn" class="chart-control-btn" title="تمام‌صفحه">⛶</button>
+                </div>
+                <svg id="orgChart" width="1200" height="850"></svg>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class OrgChartBuilder {
+            constructor() {
+                this.nodes = [];
+                this.nodeIdCounter = 0;
+                this.svg = document.getElementById('orgChart');
+                this.pendingParentId = null;
+                this.editingNodeId = null;
+                this.zoomLevel = 1;
+                this.isFullscreen = false;
+
+                this.nodeWidth = 140;
+                this.nodeHeight = 70;
+                this.horizontalSpacing = 200;
+                this.verticalSpacing = 130;
+
+                this.initializeEvents();
+            }
+
+            initializeEvents() {
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportChart());
+                document.getElementById('backupBtn').addEventListener('click', () => this.exportBackup());
+                document.getElementById('loadBackupBtn').addEventListener('click', () => {
+                    document.getElementById('backupFileInput').click();
+                });
+                document.getElementById('clearAllBtn').addEventListener('click', () => this.clearAll());
+
+                document.getElementById('zoomInBtn').addEventListener('click', () => this.zoom(1.2));
+                document.getElementById('zoomOutBtn').addEventListener('click', () => this.zoom(0.8));
+                document.getElementById('zoomResetBtn').addEventListener('click', () => this.resetZoom());
+                document.getElementById('fullscreenBtn').addEventListener('click', () => this.toggleFullscreen());
+
+                const startupOverlay = document.getElementById('startupOverlay');
+                document.getElementById('newChartBtn').addEventListener('click', () => {
+                    startupOverlay.classList.add('hidden');
+                    this.openAddPersonModal(null, true);
+                });
+                document.getElementById('loadFromStartupBtn').addEventListener('click', () => {
+                    document.getElementById('startupBackupInput').click();
+                });
+
+                document.getElementById('backupFileInput').addEventListener('change', (e) => this.handleBackupFile(e, false));
+                document.getElementById('startupBackupInput').addEventListener('change', (e) => this.handleBackupFile(e, true));
+
+                document.getElementById('cancelAddBtn').addEventListener('click', () => this.closeAddPersonModal());
+                document.getElementById('savePersonBtn').addEventListener('click', () => this.savePersonFromModal());
+
+                document.getElementById('personNameInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.savePersonFromModal();
+                });
+            }
+
+            toggleFullscreen() {
+                const container = document.getElementById('chartContainer');
+                const btn = document.getElementById('fullscreenBtn');
+                
+                if (!this.isFullscreen) {
+                    container.classList.add('fullscreen-mode');
+                    btn.textContent = '✕';
+                    btn.title = 'خروج از تمام‌صفحه';
+                    this.isFullscreen = true;
+                } else {
+                    container.classList.remove('fullscreen-mode');
+                    btn.textContent = '⛶';
+                    btn.title = 'تمام‌صفحه';
+                    this.isFullscreen = false;
+                }
+            }
+
+            zoom(factor) {
+                this.zoomLevel *= factor;
+                this.zoomLevel = Math.max(0.3, Math.min(3, this.zoomLevel));
+                this.applyZoom();
+            }
+
+            resetZoom() {
+                this.zoomLevel = 1;
+                this.applyZoom();
+            }
+
+            applyZoom() {
+                const svgContent = this.svg.querySelector('g#mainGroup');
+                if (svgContent) {
+                    svgContent.setAttribute('transform', `scale(${this.zoomLevel})`);
+                }
+            }
+
+            getTextColor(bgColor) {
+                const color = bgColor.replace('#', '');
+                const r = parseInt(color.substr(0, 2), 16);
+                const g = parseInt(color.substr(2, 2), 16);
+                const b = parseInt(color.substr(4, 2), 16);
+                const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                return brightness > 155 ? '#1f2937' : '#ffffff';
+            }
+
+            openAddPersonModal(parentId = null, isRoot = false) {
+                this.pendingParentId = parentId;
+                this.editingNodeId = null;
+                const modal = document.getElementById('addPersonModal');
+                const title = document.getElementById('addModalTitle');
+                const nameInput = document.getElementById('personNameInput');
+
+                title.textContent = isRoot ? 'تعریف ریشه سازمان' : 'افزودن فرد جدید';
+
+                nameInput.value = '';
+                document.getElementById('shapeTypeSelect').value = 'rect';
+                document.getElementById('shapeColorSelect').value = '#3b82f6';
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+
+                setTimeout(() => nameInput.focus(), 50);
+            }
+
+            openEditPersonModal(nodeId) {
+                const node = this.nodes.find(n => n.id === nodeId);
+                if (!node) return;
+
+                this.editingNodeId = nodeId;
+                this.pendingParentId = null;
+
+                const modal = document.getElementById('addPersonModal');
+                const title = document.getElementById('addModalTitle');
+
+                title.textContent = 'ویرایش فرد';
+
+                document.getElementById('personNameInput').value = node.name;
+                document.getElementById('shapeTypeSelect').value = node.shape;
+                document.getElementById('shapeColorSelect').value = node.color;
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+
+                setTimeout(() => document.getElementById('personNameInput').focus(), 50);
+            }
+
+            closeAddPersonModal() {
+                const modal = document.getElementById('addPersonModal');
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                this.pendingParentId = null;
+                this.editingNodeId = null;
+            }
+
+            savePersonFromModal() {
+                const name = document.getElementById('personNameInput').value.trim();
+                const shape = document.getElementById('shapeTypeSelect').value;
+                const color = document.getElementById('shapeColorSelect').value;
+
+                if (!name) {
+                    alert('لطفاً نام فرد را وارد کنید');
+                    return;
+                }
+
+                if (this.editingNodeId !== null) {
+                    const node = this.nodes.find(n => n.id === this.editingNodeId);
+                    if (node) {
+                        node.name = name;
+                        node.shape = shape;
+                        node.color = color;
+                    }
+                } else {
+                    const node = {
+                        id: this.nodeIdCounter++,
+                        name: name,
+                        shape: shape,
+                        color: color,
+                        parentId: this.pendingParentId,
+                        children: []
+                    };
+
+                    this.nodes.push(node);
+
+                    if (node.parentId !== null) {
+                        const parent = this.nodes.find(n => n.id === node.parentId);
+                        if (parent) {
+                            parent.children.push(node.id);
+                        }
+                    }
+                }
+
+                this.closeAddPersonModal();
+                this.render();
+            }
+
+            deleteNode(nodeId) {
+                const node = this.nodes.find(n => n.id === nodeId);
+                if (!node) return;
+
+                if (!confirm(`آیا مطمئن هستید که می‌خواهید "${node.name}" و تمام زیرمجموعه‌های آن را حذف کنید؟`)) {
+                    return;
+                }
+
+                if (node.parentId !== null) {
+                    const parent = this.nodes.find(n => n.id === node.parentId);
+                    if (parent) {
+                        parent.children = parent.children.filter(id => id !== nodeId);
+                    }
+                }
+
+                const deleteRecursively = (id) => {
+                    const current = this.nodes.find(n => n.id === id);
+                    if (!current) return;
+                    const childrenCopy = [...current.children];
+                    childrenCopy.forEach(childId => deleteRecursively(childId));
+                    this.nodes = this.nodes.filter(n => n.id !== id);
+                };
+
+                deleteRecursively(nodeId);
+                this.render();
+
+                if (this.nodes.length === 0) {
+                    document.getElementById('startupOverlay').classList.remove('hidden');
+                }
+            }
+
+            clearAll() {
+                if (this.nodes.length === 0) return;
+                if (confirm('آیا مطمئن هستید که می‌خواهید همه افراد و ساختار نمودار را پاک کنید؟')) {
+                    this.nodes = [];
+                    this.nodeIdCounter = 0;
+                    this.render();
+                    document.getElementById('startupOverlay').classList.remove('hidden');
+                }
+            }
+
+            calculateLayout() {
+                const layout = {};
+                const rootNodes = this.nodes.filter(n => n.parentId === null);
+
+                const svgWidth = parseFloat(this.svg.getAttribute('width'));
+                let currentX = svgWidth / 2;
+
+                rootNodes.forEach((rootNode, index) => {
+                    if (index > 0) {
+                        currentX += this.horizontalSpacing;
+                    }
+                    const subtreeWidth = this.layoutSubtree(rootNode, layout, 120, currentX);
+                    currentX += subtreeWidth;
+                });
+
+                return layout;
+            }
+
+            layoutSubtree(node, layout, y, startX) {
+                const children = node.children.map(id => this.nodes.find(n => n.id === id)).filter(n => n);
+
+                if (children.length === 0) {
+                    layout[node.id] = { x: startX, y: y };
+                    return this.horizontalSpacing;
+                }
+
+                let currentX = startX;
+                const childY = y + this.verticalSpacing;
+
+                children.forEach(child => {
+                    const subtreeWidth = this.layoutSubtree(child, layout, childY, currentX);
+                    currentX += subtreeWidth;
+                });
+
+                const totalWidth = currentX - startX;
+                const nodeX = startX + totalWidth / 2 - this.horizontalSpacing / 2;
+
+                layout[node.id] = { x: nodeX, y: y };
+
+                return totalWidth;
+            }
+
+            render() {
+                this.svg.innerHTML = '';
+
+                if (this.nodes.length === 0) return;
+
+                const mainGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                mainGroup.setAttribute('id', 'mainGroup');
+                this.svg.appendChild(mainGroup);
+
+                const layout = this.calculateLayout();
+
+                this.nodes.forEach(node => {
+                    if (node.parentId !== null) {
+                        const parent = this.nodes.find(n => n.id === node.parentId);
+                        if (parent && layout[node.id] && layout[parent.id]) {
+                            this.drawLine(mainGroup, layout[parent.id], layout[node.id]);
+                        }
+                    }
+                });
+
+                this.nodes.forEach(node => {
+                    if (layout[node.id]) {
+                        this.drawNode(mainGroup, node, layout[node.id].x, layout[node.id].y);
+                    }
+                });
+
+                this.applyZoom();
+            }
+
+            drawLine(container, parentPos, childPos) {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+
+                const startX = parentPos.x;
+                const startY = parentPos.y + this.nodeHeight / 2;
+                const endX = childPos.x;
+                const endY = childPos.y - this.nodeHeight / 2;
+
+                const midY = (startY + endY) / 2;
+
+                const d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY}`;
+
+                line.setAttribute('d', d);
+                line.setAttribute('class', 'line');
+
+                container.appendChild(line);
+            }
+
+            drawNode(container, node, x, y) {
+                const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                group.setAttribute('class', 'node');
+                group.setAttribute('data-id', node.id);
+
+                const fillColor = node.color || '#3b82f6';
+                const strokeColor = '#0f172a';
+                const textColor = this.getTextColor(fillColor);
+
+                let shape;
+                if (node.shape === 'rect') {
+                    shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    shape.setAttribute('x', x - this.nodeWidth / 2);
+                    shape.setAttribute('y', y - this.nodeHeight / 2);
+                    shape.setAttribute('width', this.nodeWidth);
+                    shape.setAttribute('height', this.nodeHeight);
+                    shape.setAttribute('rx', 10);
+                } else if (node.shape === 'ellipse') {
+                    shape = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+                    shape.setAttribute('cx', x);
+                    shape.setAttribute('cy', y);
+                    shape.setAttribute('rx', this.nodeWidth / 2);
+                    shape.setAttribute('ry', this.nodeHeight / 2);
+                } else if (node.shape === 'diamond') {
+                    shape = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                    const points = `${x},${y - this.nodeHeight / 2} ${x + this.nodeWidth / 2},${y} ${x},${y + this.nodeHeight / 2} ${x - this.nodeWidth / 2},${y}`;
+                    shape.setAttribute('points', points);
+                } else {
+                    shape = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    shape.setAttribute('cx', x);
+                    shape.setAttribute('cy', y);
+                    shape.setAttribute('r', this.nodeHeight / 2);
+                }
+
+                shape.setAttribute('fill', fillColor);
+                shape.setAttribute('stroke', strokeColor);
+                shape.setAttribute('stroke-width', '2');
+
+                group.appendChild(shape);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', x);
+                text.setAttribute('y', y);
+                text.setAttribute('class', 'node-text');
+                text.setAttribute('fill', textColor);
+
+                const words = node.name.split(' ');
+                if (words.length > 2 || node.name.length > 15) {
+                    const tspan1 = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+                    tspan1.setAttribute('x', x);
+                    tspan1.setAttribute('dy', '-0.3em');
+                    tspan1.textContent = words.slice(0, Math.ceil(words.length / 2)).join(' ');
+
+                    const tspan2 = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+                    tspan2.setAttribute('x', x);
+                    tspan2.setAttribute('dy', '1.2em');
+                    tspan2.textContent = words.slice(Math.ceil(words.length / 2)).join(' ');
+
+                    text.appendChild(tspan1);
+                    text.appendChild(tspan2);
+                } else {
+                    text.textContent = node.name;
+                }
+
+                group.appendChild(text);
+
+                const topY = y - this.nodeHeight / 2;
+
+                const deleteBtn = this.createButton(
+                    x + this.nodeWidth / 2 - 15,
+                    topY,
+                    '×',
+                    '#ef4444',
+                    'delete-btn'
+                );
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.deleteNode(node.id);
+                });
+                group.appendChild(deleteBtn);
+
+                const editBtn = this.createButton(
+                    x,
+                    topY,
+                    '✏',
+                    '#f59e0b',
+                    'edit-btn'
+                );
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.openEditPersonModal(node.id);
+                });
+                group.appendChild(editBtn);
+
+                const addBtn = this.createButton(
+                    x - this.nodeWidth / 2 + 15,
+                    topY,
+                    '+',
+                    '#22c55e',
+                    'add-btn'
+                );
+                addBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.openAddPersonModal(node.id, false);
+                });
+                group.appendChild(addBtn);
+
+                container.appendChild(group);
+            }
+
+            createButton(x, y, symbol, color, className) {
+                const btn = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                btn.setAttribute('class', className);
+
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', x);
+                circle.setAttribute('cy', y);
+                circle.setAttribute('r', 12);
+                circle.setAttribute('fill', color);
+                circle.setAttribute('stroke', 'white');
+                circle.setAttribute('stroke-width', '2');
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', x);
+                text.setAttribute('y', y);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dominant-baseline', 'middle');
+                text.setAttribute('fill', 'white');
+                text.setAttribute('font-size', '16');
+                text.setAttribute('font-weight', 'bold');
+                text.textContent = symbol;
+
+                btn.appendChild(circle);
+                btn.appendChild(text);
+
+                return btn;
+            }
+
+            exportChart() {
+                const tempSvg = this.svg.cloneNode(true);
+
+                const buttons = tempSvg.querySelectorAll('.delete-btn, .add-btn, .edit-btn');
+                buttons.forEach(btn => btn.remove());
+
+                const svgData = new XMLSerializer().serializeToString(tempSvg);
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+
+                canvas.width = tempSvg.width.baseVal.value;
+                canvas.height = tempSvg.height.baseVal.value;
+
+                img.onload = function () {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+
+                    const a = document.createElement('a');
+                    a.download = 'organizational-chart.png';
+                    a.href = canvas.toDataURL('image/png');
+                    a.click();
+                };
+
+                img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+            }
+
+            exportBackup() {
+                const data = {
+                    nodes: this.nodes,
+                    nodeIdCounter: this.nodeIdCounter
+                };
+
+                const json = JSON.stringify(data, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'org-chart-backup.json';
+                a.click();
+
+                URL.revokeObjectURL(url);
+            }
+
+            handleBackupFile(event, fromStartup) {
+                const file = event.target.files[0];
+                event.target.value = '';
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const json = JSON.parse(e.target.result);
+                        this.importBackup(json);
+                        if (fromStartup) {
+                            document.getElementById('startupOverlay').classList.add('hidden');
+                        }
+                        this.render();
+                    } catch (err) {
+                        console.error(err);
+                        alert('خطا در خواندن فایل پشتیبان. لطفاً از صحت فایل اطمینان حاصل کنید.');
+                    }
+                };
+                reader.readAsText(file, 'utf-8');
+            }
+
+            importBackup(data) {
+                if (!data || !Array.isArray(data.nodes)) {
+                    throw new Error('ساختار فایل پشتیبان نامعتبر است');
+                }
+
+                this.nodes = data.nodes.map(n => ({
+                    id: n.id,
+                    name: n.name,
+                    shape: n.shape || 'rect',
+                    color: n.color || '#3b82f6',
+                    parentId: (n.parentId === null || n.parentId === undefined) ? null : n.parentId,
+                    children: Array.isArray(n.children) ? n.children : []
+                }));
+
+                if (typeof data.nodeIdCounter === 'number') {
+                    this.nodeIdCounter = data.nodeIdCounter;
+                } else {
+                    const maxId = this.nodes.reduce((max, n) => Math.max(max, n.id), 0);
+                    this.nodeIdCounter = maxId + 1;
+                }
+            }
+        }
+
+        const chart = new OrgChartBuilder();
+    </script>
+</body>
+</html>
