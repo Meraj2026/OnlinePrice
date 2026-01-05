@@ -2,50 +2,37 @@
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>محاسبه‌گر حرفه‌ای پک‌های محصولی</title>
+    <title>محاسبه‌گر هوشمند پک و جایگاه</title>
     <style>
-        :root { --primary: #2563eb; --secondary: #64748b; --success: #059669; --danger: #dc2626; }
-        body { font-family: Tahoma, sans-serif; background: #f1f5f9; padding: 20px; direction: rtl; color: #1e293b; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-        .header { text-align: center; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
-        .price-info { background: #eff6ff; padding: 15px; border-radius: 15px; display: flex; justify-content: space-around; align-items: center; margin-bottom: 20px; border: 1px solid #dbeaffe6; }
-        .price-box { text-align: center; }
-        .price-box span { display: block; font-size: 0.85rem; color: var(--secondary); }
-        .price-box strong { font-size: 1.2rem; color: var(--primary); }
-        .btn-group { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
-        button { cursor: pointer; border: none; padding: 10px 20px; border-radius: 10px; font-family: Tahoma; transition: 0.3s; font-weight: bold; }
-        .btn-auto { background: var(--primary); color: white; }
+        :root { --primary: #1e40af; --secondary: #64748b; --success: #059669; --danger: #be123c; --group-bg: #f1f5f9; }
+        body { font-family: Tahoma, sans-serif; background: #e5e7eb; padding: 20px; direction: rtl; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 25px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        .price-info { background: linear-gradient(90deg, #1e3a8a, #3b82f6); color: white; padding: 20px; border-radius: 15px; display: flex; justify-content: space-around; margin-bottom: 25px; }
+        .btn-group { text-align: center; margin-bottom: 25px; }
+        button { cursor: pointer; border: none; padding: 12px 25px; border-radius: 10px; font-family: Tahoma; transition: 0.3s; font-weight: bold; margin: 0 5px; }
+        .btn-auto { background: var(--success); color: white; }
         .btn-manual { background: var(--secondary); color: white; }
-        button:hover { opacity: 0.9; transform: translateY(-2px); }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; border-radius: 12px; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { background: #f8fafc; color: #475569; padding: 15px; font-size: 0.85rem; border-bottom: 2px solid #e2e8f0; }
-        td { padding: 12px; text-align: center; border-bottom: 1px solid #f1f5f9; font-weight: bold; font-size: 0.95rem; }
-        tr:hover { background: #f8fafc; }
-        .toman-cell { color: var(--danger); font-size: 1.05rem; }
+        td { padding: 12px; text-align: center; border-bottom: 1px solid #f1f5f9; font-weight: bold; }
+        .category-row { background: var(--group-bg); color: var(--primary); font-weight: 800; text-align: right; padding-right: 20px; font-size: 1rem; }
+        .toman-cell { color: var(--danger); }
         .gift-cell { color: var(--success); }
+        .comm-cell { color: #7c3aed; }
+        .small-toman { display: block; font-size: 0.7rem; opacity: 0.7; font-weight: normal; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header">
-        <h2>سیستم محاسبه هوشمند پک‌ها</h2>
-    </div>
-
     <div class="price-info">
-        <div class="price-box">
-            <span>قیمت لحظه‌ای بازار:</span>
-            <strong id="market-price">در حال دریافت...</strong>
-        </div>
-        <div class="price-box">
-            <span>قیمت مبنای محاسبه (با ۲.۵٪):</span>
-            <strong id="calc-price" style="color:var(--danger)">---</strong>
-        </div>
+        <div><span>قیمت بازار: </span><strong id="m-price">در حال دریافت...</strong></div>
+        <div><span>مبنای محاسبات (+۲.۵٪): </span><strong id="c-price">---</strong></div>
     </div>
 
     <div class="btn-group">
-        <button class="btn-auto" onclick="fetchPrice()">بروزرسانی از بازار</button>
-        <button class="btn-manual" onclick="setManualPrice()">وارد کردن قیمت دستی</button>
+        <button class="btn-auto" onclick="fetchPrice()">آپدیت از بازار</button>
+        <button class="btn-manual" onclick="setManualPrice()">ورود قیمت دستی</button>
     </div>
 
     <table>
@@ -55,81 +42,69 @@
                 <th>+۱۵٪ گمرکی ($)</th>
                 <th>مبلغ نهایی (تومان)</th>
                 <th>هدایای محصولی ($)</th>
+                <th>پورسانت دریافتی ($)</th>
             </tr>
         </thead>
-        <tbody id="table-body">
-            </tbody>
+        <tbody id="table-body"></tbody>
     </table>
 </div>
 
 <script>
-    // لیست پک‌ها و هدایای متناظر
-    const dataList = [
-        { pack: 100, gift: 0 },
-        { pack: 300, gift: 115 },
-        { pack: 500, gift: 230 },
-        { pack: 700, gift: 460 },
-        { pack: 800, gift: 460 },
-        { pack: 900, gift: 460 },
-        { pack: 1100, gift: 690 },
-        { pack: 1500, gift: 920 },
-        { pack: 2100, gift: 1150 },
-        { pack: 2500, gift: 1380 },
-        { pack: 2700, gift: 1380 },
-        { pack: 3000, gift: 1840 },
-        { pack: 3500, gift: 1840 }
+    const groups = [
+        { name: "دسته بندی اول: یک جایگاه", items: [
+            {p: 100, g: 0, c: 0}, {p: 300, g: 115, c: 0}, {p: 500, g: 230, c: 0}
+        ]},
+        { name: "دسته بندی دوم: سه جایگاه", items: [
+            {p: 700, g: 460, c: 16}, {p: 1100, g: 690, c: 48}, {p: 1500, g: 920, c: 80}
+        ]},
+        { name: "دسته بندی سوم: پنج جایگاه", items: [
+            {p: 900, g: 460, c: 32}, {p: 1300, g: 690, c: 64}, {p: 1700, g: 920, c: 96}, {p: 2100, g: 1150, c: 128}, {p: 2500, g: 1380, c: 160}
+        ]},
+        { name: "دسته بندی چهارم: هفت جایگاه", items: [
+            {p: 1900, g: 1380, c: 144}, {p: 2700, g: 1840, c: 272}, {p: 3500, g: 2300, c: 400}
+        ]}
     ];
-
-    let currentBasePrice = 0;
 
     async function fetchPrice() {
         try {
-            const res = await fetch(`https://api.tetherland.com/currencies?v=${new Date().getTime()}`);
+            const res = await fetch(`https://api.tetherland.com/currencies?v=${Date.now()}`);
             const data = await res.json();
-            const price = parseInt(data.data.currencies.USDT.price);
-            document.getElementById('market-price').innerText = price.toLocaleString() + " تومان";
-            calculateAll(price);
-        } catch (e) {
-            alert("خطا در دریافت قیمت از بازار. لطفا قیمت را دستی وارد کنید.");
-        }
+            updateAll(parseInt(data.data.currencies.USDT.price));
+        } catch (e) { alert("خطا در دریافت قیمت."); }
     }
 
     function setManualPrice() {
-        const val = prompt("لطفا قیمت تتر را به تومان وارد کنید:", "70000");
-        if (val) {
-            document.getElementById('market-price').innerText = parseInt(val).toLocaleString() + " تومان (دستی)";
-            calculateAll(parseInt(val));
-        }
+        const val = prompt("قیمت تتر (تومان):", "70000");
+        if(val) updateAll(parseInt(val));
     }
 
-    function calculateAll(marketPrice) {
-        // ۱- قیمتی که در محاسبات انجام می‌شود ۲.۵ درصد بیشتر است
-        const calculationPrice = marketPrice * 1.025;
-        document.getElementById('calc-price').innerText = Math.round(calculationPrice).toLocaleString() + " تومان";
+    function updateAll(marketPrice) {
+        const calcPrice = marketPrice * 1.025;
+        document.getElementById('m-price').innerText = marketPrice.toLocaleString() + " ت";
+        document.getElementById('c-price').innerText = Math.round(calcPrice).toLocaleString() + " ت";
         
         const tbody = document.getElementById('table-body');
         tbody.innerHTML = '';
 
-        dataList.forEach(item => {
-            // ۲- اضافه کردن ۱۵ درصد هزینه گمرکی
-            const withCustoms = item.pack * 1.15;
-            // ۳- تبدیل به تومان با قیمت ۲.۵٪ بالاتر
-            const finalToman = withCustoms * calculationPrice;
+        groups.forEach(group => {
+            tbody.innerHTML += `<tr><td colspan="5" class="category-row">${group.name}</td></tr>`;
+            group.items.forEach(item => {
+                const customs = item.p * 1.15;
+                const toman = customs * calcPrice;
+                const commToman = item.c * calcPrice;
 
-            tbody.innerHTML += `
-                <tr>
-                    <td>$${item.pack.toLocaleString()}</td>
-                    <td>$${withCustoms.toLocaleString()}</td>
-                    <td class="toman-cell">${Math.round(finalToman).toLocaleString()} تومان</td>
-                    <td class="gift-cell">$${item.gift.toLocaleString()}</td>
-                </tr>
-            `;
+                tbody.innerHTML += `
+                    <tr>
+                        <td>$${item.p.toLocaleString()}</td>
+                        <td>$${customs.toLocaleString()}</td>
+                        <td class="toman-cell">${Math.round(toman).toLocaleString()} تومان</td>
+                        <td class="gift-cell">$${item.g.toLocaleString()}</td>
+                        <td class="comm-cell">$${item.c.toLocaleString()} <span class="small-toman">(${Math.round(commToman).toLocaleString()} ت)</span></td>
+                    </tr>`;
+            });
         });
     }
-
-    // شروع خودکار
     fetchPrice();
 </script>
-
 </body>
 </html>
