@@ -8,11 +8,27 @@
         body { font-family: Tahoma, sans-serif; background: #e5e7eb; padding: 20px; direction: rtl; }
         .container { max-width: 1050px; margin: auto; background: white; padding: 30px; border-radius: 25px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
         .main-title { text-align: center; color: var(--primary); margin-bottom: 25px; font-size: 1.8rem; font-weight: bold; }
-        .price-info { background: linear-gradient(90deg, #1e3a8a, #3b82f6); color: white; padding: 20px; border-radius: 15px; display: flex; justify-content: space-around; margin-bottom: 25px; }
+        
+        /* اصلاح استایل کادر آبی برای نمایش متن جمله‌ای */
+        .price-info-banner { 
+            background: linear-gradient(90deg, #1e3a8a, #3b82f6); 
+            color: white; 
+            padding: 20px; 
+            border-radius: 15px; 
+            margin-bottom: 25px; 
+            line-height: 1.8;
+            text-align: center;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 15px rgba(30, 58, 138, 0.2);
+        }
+        .price-info-banner strong { color: #ffd600; font-size: 1.3rem; }
+
         .btn-group { text-align: center; margin-bottom: 25px; }
         button { cursor: pointer; border: none; padding: 12px 25px; border-radius: 10px; font-family: Tahoma; transition: 0.3s; font-weight: bold; margin: 0 5px; }
         .btn-auto { background: var(--success); color: white; }
         .btn-manual { background: var(--secondary); color: white; }
+        button:hover { opacity: 0.9; transform: translateY(-2px); }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { background: #f8fafc; color: #475569; padding: 15px; font-size: 0.85rem; border-bottom: 2px solid #e2e8f0; }
         td { padding: 12px; text-align: center; border-bottom: 1px solid #f1f5f9; font-weight: bold; }
@@ -28,9 +44,8 @@
 <div class="container">
     <div class="main-title">با چه مبلغی شروع کنیم؟</div>
 
-    <div class="price-info">
-        <div><span>قیمت بازار: </span><strong id="m-price">در حال دریافت...</strong></div>
-        <div><span>مبنای محاسبات (+۲.۵٪): </span><strong id="c-price">---</strong></div>
+    <div class="price-info-banner" id="price-banner">
+        در حال دریافت اطلاعات بازار...
     </div>
 
     <div class="btn-group">
@@ -83,8 +98,10 @@
 
     function updateAll(marketPrice) {
         const calcPrice = marketPrice * 1.025;
-        document.getElementById('m-price').innerText = marketPrice.toLocaleString() + " ت";
-        document.getElementById('c-price').innerText = Math.round(calcPrice).toLocaleString() + " ت";
+        const banner = document.getElementById('price-banner');
+        
+        // جای‌گذاری اعداد در جمله مدنظر شما
+        banner.innerHTML = `قیمت تتر در بازار کنونی <strong>${marketPrice.toLocaleString()}</strong> تومان است و مبنای محاسبات ما ۲,۵ درصد بیشتر از آن؛ یعنی <strong>${Math.round(calcPrice).toLocaleString()}</strong> تومان.`;
         
         const tbody = document.getElementById('table-body');
         tbody.innerHTML = '';
@@ -95,7 +112,6 @@
                 const customs = item.p * 1.15;
                 const totalToman = customs * calcPrice;
                 const giftToman = item.g * calcPrice;
-                
                 const commissionAfterVoucher = item.c * 0.9;
                 const commToman = commissionAfterVoucher * calcPrice;
 
