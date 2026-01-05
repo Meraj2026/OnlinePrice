@@ -2,11 +2,12 @@
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>محاسبه‌گر هوشمند پک و جایگاه</title>
+    <title>با چه مبلغی شروع کنیم؟</title>
     <style>
         :root { --primary: #1e40af; --secondary: #64748b; --success: #059669; --danger: #be123c; --group-bg: #f1f5f9; }
         body { font-family: Tahoma, sans-serif; background: #e5e7eb; padding: 20px; direction: rtl; }
-        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 25px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        .container { max-width: 1050px; margin: auto; background: white; padding: 30px; border-radius: 25px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        .main-title { text-align: center; color: var(--primary); margin-bottom: 25px; font-size: 1.8rem; font-weight: bold; }
         .price-info { background: linear-gradient(90deg, #1e3a8a, #3b82f6); color: white; padding: 20px; border-radius: 15px; display: flex; justify-content: space-around; margin-bottom: 25px; }
         .btn-group { text-align: center; margin-bottom: 25px; }
         button { cursor: pointer; border: none; padding: 12px 25px; border-radius: 10px; font-family: Tahoma; transition: 0.3s; font-weight: bold; margin: 0 5px; }
@@ -19,12 +20,14 @@
         .toman-cell { color: var(--danger); }
         .gift-cell { color: var(--success); }
         .comm-cell { color: #7c3aed; }
-        .small-toman { display: block; font-size: 0.7rem; opacity: 0.7; font-weight: normal; }
+        .small-toman { display: block; font-size: 0.75rem; opacity: 0.8; font-weight: normal; margin-top: 4px; color: #64748b; }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <div class="main-title">با چه مبلغی شروع کنیم؟</div>
+
     <div class="price-info">
         <div><span>قیمت بازار: </span><strong id="m-price">در حال دریافت...</strong></div>
         <div><span>مبنای محاسبات (+۲.۵٪): </span><strong id="c-price">---</strong></div>
@@ -42,7 +45,7 @@
                 <th>+۱۵٪ گمرکی ($)</th>
                 <th>مبلغ نهایی (تومان)</th>
                 <th>هدایای محصولی ($)</th>
-                <th>پورسانت دریافتی ($)</th>
+                <th>پورسانت دریافتی (با کسر ووچر) ($)</th>
             </tr>
         </thead>
         <tbody id="table-body"></tbody>
@@ -90,16 +93,25 @@
             tbody.innerHTML += `<tr><td colspan="5" class="category-row">${group.name}</td></tr>`;
             group.items.forEach(item => {
                 const customs = item.p * 1.15;
-                const toman = customs * calcPrice;
-                const commToman = item.c * calcPrice;
+                const totalToman = customs * calcPrice;
+                const giftToman = item.g * calcPrice;
+                
+                const commissionAfterVoucher = item.c * 0.9;
+                const commToman = commissionAfterVoucher * calcPrice;
 
                 tbody.innerHTML += `
                     <tr>
                         <td>$${item.p.toLocaleString()}</td>
                         <td>$${customs.toLocaleString()}</td>
-                        <td class="toman-cell">${Math.round(toman).toLocaleString()} تومان</td>
-                        <td class="gift-cell">$${item.g.toLocaleString()}</td>
-                        <td class="comm-cell">$${item.c.toLocaleString()} <span class="small-toman">(${Math.round(commToman).toLocaleString()} ت)</span></td>
+                        <td class="toman-cell">${Math.round(totalToman).toLocaleString()} تومان</td>
+                        <td class="gift-cell">
+                            $${item.g.toLocaleString()}
+                            <span class="small-toman">(${Math.round(giftToman).toLocaleString()} ت)</span>
+                        </td>
+                        <td class="comm-cell">
+                            $${commissionAfterVoucher.toLocaleString(undefined, {minimumFractionDigits: 1})} 
+                            <span class="small-toman">(${Math.round(commToman).toLocaleString()} ت)</span>
+                        </td>
                     </tr>`;
             });
         });
