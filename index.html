@@ -20,7 +20,7 @@
         button { cursor: pointer; border: none; padding: 12px 25px; border-radius: 10px; font-family: Tahoma; transition: 0.3s; font-weight: bold; margin: 0 5px; }
         .btn-auto { background: var(--success); color: white; }
         .btn-manual { background: var(--secondary); color: white; }
-        .btn-calc { background: #f59e0b; color: white; } /* دکمه ماشین حساب */
+        .btn-calc { background: #f59e0b; color: white; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { background: #f8fafc; color: #475569; padding: 15px; font-size: 0.85rem; border-bottom: 2px solid #e2e8f0; }
@@ -31,13 +31,20 @@
         .comm-cell { color: #7c3aed; }
         .small-toman { display: block; font-size: 0.75rem; opacity: 0.8; font-weight: normal; margin-top: 4px; color: #64748b; }
 
-        /* استایل پاپ آپ ماشین حساب */
+        /* پاپ آپ ها */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); }
-        .modal-content { background: white; margin: 10% auto; padding: 30px; border-radius: 20px; width: 350px; text-align: center; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        .modal-content { background: white; margin: 5% auto; padding: 30px; border-radius: 20px; width: 450px; text-align: right; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); line-height: 1.6; }
         .close { position: absolute; left: 20px; top: 15px; font-size: 28px; cursor: pointer; color: #aaa; }
-        .modal input { width: 90%; padding: 12px; margin: 15px 0; border: 2px solid #ddd; border-radius: 10px; text-align: center; font-size: 1.1rem; font-family: Tahoma; }
-        .calc-res { background: #f9fafb; padding: 15px; border-radius: 10px; margin-top: 15px; border: 1px solid #eee; }
-        .calc-res div { margin-bottom: 10px; font-weight: bold; }
+        
+        /* استایل ماشین حساب اختصاصی */
+        .calc-modal { width: 350px !important; text-align: center !important; }
+        .calc-modal input { width: 90%; padding: 12px; margin: 15px 0; border: 2px solid #ddd; border-radius: 10px; text-align: center; font-size: 1.1rem; font-family: Tahoma; }
+
+        /* استایل لیست راهنما */
+        .guide-list { list-style: none; padding: 0; }
+        .guide-list li { margin-bottom: 15px; padding-right: 30px; position: relative; font-size: 0.95rem; }
+        .guide-list li::before { content: '🔹'; position: absolute; right: 0; top: 2px; }
+        .btn-got-it { background: var(--primary); color: white; width: 100%; margin-top: 20px; padding: 15px; font-size: 1rem; }
     </style>
 </head>
 <body>
@@ -50,7 +57,7 @@
     <div class="btn-group">
         <button class="btn-auto" onclick="fetchPrice()">آپدیت از بازار</button>
         <button class="btn-manual" onclick="setManualPrice()">ورود قیمت دستی</button>
-        <button class="btn-calc" onclick="toggleModal(true)">🖩 ماشین‌حساب سریع</button>
+        <button class="btn-calc" onclick="toggleModal('calcModal', true)">🖩 ماشین‌حساب سریع</button>
     </div>
 
     <table>
@@ -67,16 +74,29 @@
     </table>
 </div>
 
-<div id="calcModal" class="modal">
+<div id="guideModal" class="modal" style="display: block;">
     <div class="modal-content">
-        <span class="close" onclick="toggleModal(false)">&times;</span>
+        <h3 style="color: var(--primary); text-align: center; border-bottom: 2px solid #eee; padding-bottom: 10px;">💡 راهنمای استفاده از صفحه</h3>
+        <ul class="guide-list">
+            <li><strong>قیمت تتر:</strong> قیمت بازار به صورت لحظه‌ای دریافت می‌شود. برای امنیت معاملات، محاسبات ما با <b>۲.۵٪ کارمزد</b> بیشتر از بازار انجام می‌شود.</li>
+            <li><strong>گمرکی:</strong> به قیمت هر پک، <b>۱۵٪ هزینه گمرکی</b> اضافه شده و در ستون دوم نمایش داده می‌شود.</li>
+            <li><strong>هدایا و پورسانت:</strong> در ستون‌های آخر، مقدار دلاری و معادل تومانی آن‌ها را می‌بینید. پورسانت‌ها با <b>کسر ۱۰٪ ووچر</b> محاسبه شده‌اند.</li>
+            <li><strong>آپدیت بازار:</strong> این دکمه قیمت جدید را مستقیماً از صرافی دریافت و جدول را به‌روز می‌کند.</li>
+            <li><strong>قیمت دستی:</strong> اگر نوسان بازار زیاد بود، می‌توانید قیمت مدنظر خودتان را دستی وارد کنید.</li>
+            <li><strong>ماشین‌حساب:</strong> برای مبالغی که در جدول نیستند، از دکمه نارنجی استفاده کنید.</li>
+        </ul>
+        <button class="btn-got-it" onclick="toggleModal('guideModal', false)">متوجه شدم</button>
+    </div>
+</div>
+
+<div id="calcModal" class="modal">
+    <div class="modal-content calc-modal">
+        <span class="close" onclick="toggleModal('calcModal', false)">&times;</span>
         <h3 style="color: var(--primary)">ماشین‌حساب گمرکی</h3>
-        <p style="font-size: 0.8rem; color: #666;">مبلغ دلاری را وارد کنید:</p>
-        <input type="number" id="calcInput" placeholder="مثلاً 1000" oninput="quickCalc()">
-        
-        <div class="calc-res">
-            <div style="color: var(--secondary)">با ۱۵٪ گمرکی: <span id="resUsd" style="color: var(--primary)">0</span> $</div>
-            <div style="color: var(--danger)">معادل تومانی:<br><span id="resToman" style="font-size: 1.3rem;">0</span> تومان</div>
+        <input type="number" id="calcInput" placeholder="مبلغ به دلار" oninput="quickCalc()">
+        <div style="background: #f9fafb; padding: 15px; border-radius: 10px; border: 1px solid #eee;">
+            <div style="margin-bottom:10px">با ۱۵٪ گمرکی: <span id="resUsd" style="color:var(--primary)">0</span> $</div>
+            <div style="color:var(--danger)">معادل تومانی:<br><span id="resToman" style="font-size:1.3rem">0</span> تومان</div>
         </div>
     </div>
 </div>
@@ -89,7 +109,7 @@
         { name: "دسته بندی چهارم: هفت جایگاه", items: [{p: 1900, g: 1380, c: 144}, {p: 2700, g: 1840, c: 272}, {p: 3500, g: 2300, c: 400}]}
     ];
 
-    let globalCalcPrice = 0; // قیمت مبنا برای ماشین حساب
+    let globalCalcPrice = 0;
 
     async function fetchPrice() {
         try {
@@ -130,12 +150,11 @@
                     </tr>`;
             });
         });
-        quickCalc(); // بروزرسانی ماشین حساب اگر باز بود
+        quickCalc();
     }
 
-    // توابع ماشین حساب
-    function toggleModal(show) {
-        document.getElementById('calcModal').style.display = show ? 'block' : 'none';
+    function toggleModal(id, show) {
+        document.getElementById(id).style.display = show ? 'block' : 'none';
     }
 
     function quickCalc() {
@@ -151,8 +170,11 @@
         }
     }
 
+    // بستن پاپ آپ با کلیک بیرون از آن
     window.onclick = function(event) {
-        if (event.target == document.getElementById('calcModal')) toggleModal(false);
+        if (event.target.className === 'modal') {
+            event.target.style.display = 'none';
+        }
     }
 
     fetchPrice();
