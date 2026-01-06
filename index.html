@@ -6,20 +6,13 @@
     <style>
         :root { --primary: #1e40af; --secondary: #64748b; --success: #059669; --danger: #be123c; --group-bg: #f1f5f9; }
         body { font-family: Tahoma, sans-serif; background: #e5e7eb; padding: 20px; direction: rtl; }
-        .container { max-width: 1050px; margin: auto; background: white; padding: 30px; border-radius: 25px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        .container { max-width: 1050px; margin: auto; background: white; padding: 30px; border-radius: 25px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); position: relative; }
         .main-title { text-align: center; color: var(--primary); margin-bottom: 25px; font-size: 1.8rem; font-weight: bold; }
         
-        /* اصلاح استایل کادر آبی برای نمایش متن جمله‌ای */
         .price-info-banner { 
             background: linear-gradient(90deg, #1e3a8a, #3b82f6); 
-            color: white; 
-            padding: 20px; 
-            border-radius: 15px; 
-            margin-bottom: 25px; 
-            line-height: 1.8;
-            text-align: center;
-            font-size: 1.1rem;
-            box-shadow: 0 4px 15px rgba(30, 58, 138, 0.2);
+            color: white; padding: 20px; border-radius: 15px; margin-bottom: 25px; 
+            line-height: 1.8; text-align: center; font-size: 1.1rem;
         }
         .price-info-banner strong { color: #ffd600; font-size: 1.3rem; }
 
@@ -27,7 +20,7 @@
         button { cursor: pointer; border: none; padding: 12px 25px; border-radius: 10px; font-family: Tahoma; transition: 0.3s; font-weight: bold; margin: 0 5px; }
         .btn-auto { background: var(--success); color: white; }
         .btn-manual { background: var(--secondary); color: white; }
-        button:hover { opacity: 0.9; transform: translateY(-2px); }
+        .btn-calc { background: #f59e0b; color: white; } /* دکمه ماشین حساب */
         
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { background: #f8fafc; color: #475569; padding: 15px; font-size: 0.85rem; border-bottom: 2px solid #e2e8f0; }
@@ -37,6 +30,14 @@
         .gift-cell { color: var(--success); }
         .comm-cell { color: #7c3aed; }
         .small-toman { display: block; font-size: 0.75rem; opacity: 0.8; font-weight: normal; margin-top: 4px; color: #64748b; }
+
+        /* استایل پاپ آپ ماشین حساب */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); }
+        .modal-content { background: white; margin: 10% auto; padding: 30px; border-radius: 20px; width: 350px; text-align: center; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        .close { position: absolute; left: 20px; top: 15px; font-size: 28px; cursor: pointer; color: #aaa; }
+        .modal input { width: 90%; padding: 12px; margin: 15px 0; border: 2px solid #ddd; border-radius: 10px; text-align: center; font-size: 1.1rem; font-family: Tahoma; }
+        .calc-res { background: #f9fafb; padding: 15px; border-radius: 10px; margin-top: 15px; border: 1px solid #eee; }
+        .calc-res div { margin-bottom: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -44,13 +45,12 @@
 <div class="container">
     <div class="main-title">با چه مبلغی شروع کنیم؟</div>
 
-    <div class="price-info-banner" id="price-banner">
-        در حال دریافت اطلاعات بازار...
-    </div>
+    <div class="price-info-banner" id="price-banner">در حال دریافت اطلاعات بازار...</div>
 
     <div class="btn-group">
         <button class="btn-auto" onclick="fetchPrice()">آپدیت از بازار</button>
         <button class="btn-manual" onclick="setManualPrice()">ورود قیمت دستی</button>
+        <button class="btn-calc" onclick="toggleModal(true)">🖩 ماشین‌حساب سریع</button>
     </div>
 
     <table>
@@ -67,21 +67,29 @@
     </table>
 </div>
 
+<div id="calcModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="toggleModal(false)">&times;</span>
+        <h3 style="color: var(--primary)">ماشین‌حساب گمرکی</h3>
+        <p style="font-size: 0.8rem; color: #666;">مبلغ دلاری را وارد کنید:</p>
+        <input type="number" id="calcInput" placeholder="مثلاً 1000" oninput="quickCalc()">
+        
+        <div class="calc-res">
+            <div style="color: var(--secondary)">با ۱۵٪ گمرکی: <span id="resUsd" style="color: var(--primary)">0</span> $</div>
+            <div style="color: var(--danger)">معادل تومانی:<br><span id="resToman" style="font-size: 1.3rem;">0</span> تومان</div>
+        </div>
+    </div>
+</div>
+
 <script>
     const groups = [
-        { name: "دسته بندی اول: یک جایگاه", items: [
-            {p: 100, g: 0, c: 0}, {p: 300, g: 115, c: 0}, {p: 500, g: 230, c: 0}
-        ]},
-        { name: "دسته بندی دوم: سه جایگاه", items: [
-            {p: 700, g: 460, c: 16}, {p: 1100, g: 690, c: 48}, {p: 1500, g: 920, c: 80}
-        ]},
-        { name: "دسته بندی سوم: پنج جایگاه", items: [
-            {p: 900, g: 460, c: 32}, {p: 1300, g: 690, c: 64}, {p: 1700, g: 920, c: 96}, {p: 2100, g: 1150, c: 128}, {p: 2500, g: 1380, c: 160}
-        ]},
-        { name: "دسته بندی چهارم: هفت جایگاه", items: [
-            {p: 1900, g: 1380, c: 144}, {p: 2700, g: 1840, c: 272}, {p: 3500, g: 2300, c: 400}
-        ]}
+        { name: "دسته بندی اول: یک جایگاه", items: [{p: 100, g: 0, c: 0}, {p: 300, g: 115, c: 0}, {p: 500, g: 230, c: 0}]},
+        { name: "دسته بندی دوم: سه جایگاه", items: [{p: 700, g: 460, c: 16}, {p: 1100, g: 690, c: 48}, {p: 1500, g: 920, c: 80}]},
+        { name: "دسته بندی سوم: پنج جایگاه", items: [{p: 900, g: 460, c: 32}, {p: 1300, g: 690, c: 64}, {p: 1700, g: 920, c: 96}, {p: 2100, g: 1150, c: 128}, {p: 2500, g: 1380, c: 160}]},
+        { name: "دسته بندی چهارم: هفت جایگاه", items: [{p: 1900, g: 1380, c: 144}, {p: 2700, g: 1840, c: 272}, {p: 3500, g: 2300, c: 400}]}
     ];
+
+    let globalCalcPrice = 0; // قیمت مبنا برای ماشین حساب
 
     async function fetchPrice() {
         try {
@@ -97,11 +105,8 @@
     }
 
     function updateAll(marketPrice) {
-        const calcPrice = marketPrice * 1.025;
-        const banner = document.getElementById('price-banner');
-        
-        // جای‌گذاری اعداد در جمله مدنظر شما
-        banner.innerHTML = `قیمت تتر در بازار کنونی <strong>${marketPrice.toLocaleString()}</strong> تومان است و مبنای محاسبات ما ۲,۵ درصد بیشتر از آن؛ یعنی <strong>${Math.round(calcPrice).toLocaleString()}</strong> تومان.`;
+        globalCalcPrice = marketPrice * 1.025;
+        document.getElementById('price-banner').innerHTML = `قیمت تتر در بازار کنونی <strong>${marketPrice.toLocaleString()}</strong> تومان است و مبنای محاسبات ما ۲,۵ درصد بیشتر از آن؛ یعنی <strong>${Math.round(globalCalcPrice).toLocaleString()}</strong> تومان.`;
         
         const tbody = document.getElementById('table-body');
         tbody.innerHTML = '';
@@ -110,28 +115,46 @@
             tbody.innerHTML += `<tr><td colspan="5" class="category-row">${group.name}</td></tr>`;
             group.items.forEach(item => {
                 const customs = item.p * 1.15;
-                const totalToman = customs * calcPrice;
-                const giftToman = item.g * calcPrice;
-                const commissionAfterVoucher = item.c * 0.9;
-                const commToman = commissionAfterVoucher * calcPrice;
+                const totalToman = customs * globalCalcPrice;
+                const giftToman = item.g * globalCalcPrice;
+                const commAfterVoucher = item.c * 0.9;
+                const commToman = commAfterVoucher * globalCalcPrice;
 
                 tbody.innerHTML += `
                     <tr>
                         <td>$${item.p.toLocaleString()}</td>
                         <td>$${customs.toLocaleString()}</td>
                         <td class="toman-cell">${Math.round(totalToman).toLocaleString()} تومان</td>
-                        <td class="gift-cell">
-                            $${item.g.toLocaleString()}
-                            <span class="small-toman">(${Math.round(giftToman).toLocaleString()} ت)</span>
-                        </td>
-                        <td class="comm-cell">
-                            $${commissionAfterVoucher.toLocaleString(undefined, {minimumFractionDigits: 1})} 
-                            <span class="small-toman">(${Math.round(commToman).toLocaleString()} ت)</span>
-                        </td>
+                        <td class="gift-cell">$${item.g.toLocaleString()} <span class="small-toman">(${Math.round(giftToman).toLocaleString()} ت)</span></td>
+                        <td class="comm-cell">${commAfterVoucher.toLocaleString(undefined, {minimumFractionDigits: 1})} <span class="small-toman">(${Math.round(commToman).toLocaleString()} ت)</span></td>
                     </tr>`;
             });
         });
+        quickCalc(); // بروزرسانی ماشین حساب اگر باز بود
     }
+
+    // توابع ماشین حساب
+    function toggleModal(show) {
+        document.getElementById('calcModal').style.display = show ? 'block' : 'none';
+    }
+
+    function quickCalc() {
+        const val = document.getElementById('calcInput').value;
+        if(val > 0) {
+            const withCustoms = val * 1.15;
+            const toman = withCustoms * globalCalcPrice;
+            document.getElementById('resUsd').innerText = withCustoms.toLocaleString();
+            document.getElementById('resToman').innerText = Math.round(toman).toLocaleString();
+        } else {
+            document.getElementById('resUsd').innerText = '0';
+            document.getElementById('resToman').innerText = '0';
+        }
+    }
+
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('calcModal')) toggleModal(false);
+    }
+
     fetchPrice();
 </script>
 </body>
