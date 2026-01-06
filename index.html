@@ -92,7 +92,7 @@
 <div id="calcModal" class="modal">
     <div class="modal-content calc-modal">
         <span class="close" onclick="toggleModal('calcModal', false)">&times;</span>
-        <h3 style="color: var(--primary)">ماشین‌حساب گمرکی</h3>
+        <h3 style="color: var(--primary)">ماشین‌حساب مبالغ دلخواه</h3>
         <input type="number" id="calcInput" placeholder="مبلغ به دلار" oninput="quickCalc()">
         <div style="background: #f9fafb; padding: 15px; border-radius: 10px; border: 1px solid #eee;">
             <div style="margin-bottom:10px">با ۱۵٪ گمرکی: <span id="resUsd" style="color:var(--primary)">0</span> $</div>
@@ -103,10 +103,10 @@
 
 <script>
     const groups = [
-        { name: "دسته بندی اول: یک جایگاه", items: [{p: 100, g: 0, c: 0}, {p: 300, g: 115, c: 0}, {p: 500, g: 230, c: 0}]},
-        { name: "دسته بندی دوم: سه جایگاه", items: [{p: 700, g: 460, c: 16}, {p: 1100, g: 690, c: 48}, {p: 1500, g: 920, c: 80}]},
-        { name: "دسته بندی سوم: پنج جایگاه", items: [{p: 900, g: 460, c: 32}, {p: 1300, g: 690, c: 64}, {p: 1700, g: 920, c: 96}, {p: 2100, g: 1150, c: 128}, {p: 2500, g: 1380, c: 160}]},
-        { name: "دسته بندی چهارم: هفت جایگاه", items: [{p: 1900, g: 1380, c: 144}, {p: 2700, g: 1840, c: 272}, {p: 3500, g: 2300, c: 400}]}
+        { name: ":حالت‌های مختلف یک جایگاه", items: [{p: 100, g: 0, c: 0}, {p: 300, g: 115, c: 0}, {p: 500, g: 230, c: 0}]},
+        { name: ":حالت‌های مختلف سه جایگاه", items: [{p: 700, g: 460, c: 16}, {p: 1100, g: 690, c: 48}, {p: 1500, g: 920, c: 80}]},
+        { name: ":حالت‌های مختلف پنج جایگاه", items: [{p: 900, g: 460, c: 32}, {p: 1300, g: 690, c: 64}, {p: 1700, g: 920, c: 96}, {p: 2100, g: 1150, c: 128}, {p: 2500, g: 1380, c: 160}]},
+        { name: ":حالت‌های مختلف هفت جایگاه", items: [{p: 1900, g: 1380, c: 144}, {p: 2700, g: 1840, c: 272}, {p: 3500, g: 2300, c: 400}]}
     ];
 
     let globalCalcPrice = 0;
